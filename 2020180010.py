@@ -25,7 +25,7 @@ def DB():
     # 训练集
     train_data = []
 
-    attr_data.append(["男","运动员","70后","光头","80后","离婚","选秀","篮球","内地","演员"])
+    attr_data.extend(["人物","男","运动员","70后","光头","80后","离婚","选秀","篮球","内地","演员"])
 
     train_data.append(["姚明","是","是","否","否","是","否","否","是","是","否"])
     train_data.append(["刘翔","是","是","否","否","是","是","否","否","是","否"])
@@ -63,12 +63,15 @@ def split_data_set(data_set, axis, value):
     return sub_data_set
 
 # 计算数组中重复的数
-def count_data_rep(data_arr):
-    b = set(data_arr)
+def count_data_rep(data_set,axis):
+    sub_data_set = []
+    for line in data_set:
+        sub_data_set.append(line[axis])
     dic={}
+    b=set(sub_data_set)
     for each_b in b:
         count = 0
-        for each_a in data_arr:
+        for each_a in sub_data_set:
             if each_b == each_a:
                 count += 1
         dic[each_b]=count
@@ -101,7 +104,7 @@ def info_entropy(data_set):
     entropy = 0.0
     # 计算信息熵:-∑PilogPi
     for key in count.keys():
-        entropy+=math_entropy(count[key],num)
+        entropy-=math_entropy(count[key],num)
         print("人名", key, "概率", float(count[key]) / num, "信息熵",math_entropy(count[key],num))
 
     print("Ent(D)=", entropy)
@@ -121,19 +124,21 @@ def max_entropy(data_set):
     # 包含的选项
     option_list=["是","否"]
     # axis为列号
-    for axis in range(feature_num):
+    for axis in range(1,feature_num):
         new_ent = 0.0
         # 将 是与否的个数提取出来
-        option_dic=count_data_rep(data_set[axis])
+        option_dic=count_data_rep(data_set,axis)
         # value为列可能的取值，在20问读心游戏里为：是/否
         for value in option_list:
+            if value not in option_dic:
+                continue
             sub_data_set = split_data_set(data_set, axis, value)
             # 计算条件概率
             P = float(option_dic[value]) / len(data_set)
             # 计算条件熵
             temp = P * info_entropy(sub_data_set) # Ent(a)
             new_ent += temp
-            print("属性值", value, "条件概率", P, "条件熵", temp)  
+            print("属性值", value, "条件概率", P, "条件熵", temp)
         print("条件熵总和为：", new_ent)
         # 计算信息增益
         info_gain = root_node - new_ent # Gain(D,A)
@@ -150,7 +155,7 @@ def create_tree(data_set, attr):
     # note: 因为递归，data_set会改变，每次要从新的data_set中获取
     true_labels = []
     for line in data_set:
-        true_labels.append(line[-1])
+        true_labels.append(line[0])
     # 递归终止条件：标签全部相同（例如全是‘姚明’），或者只有一个标签，没必要再进行下去，直接返回这个标签
     if true_labels.count(true_labels[0]) == len(true_labels):
         return true_labels[0]
@@ -184,6 +189,8 @@ def create_tree(data_set, attr):
     return root
 
 attr_data,train_data=DB()
-attr_copy = train_data.copy()
+attr_copy = attr_data.copy()
 # info_entropy(train_data)
-decision_tree = create_tree(attr_data, attr_copy)
+decision_tree = create_tree(train_data, attr_copy)
+print("决策树结构为：")
+print(decision_tree)
