@@ -4,18 +4,20 @@
 ################################
 import io
 import sys
-# import urllib.request
 import platform
 if(platform.system()=='Windows'):
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer,encoding='utf8') #改变标准输出的默认编码
 
 ##############################
 #请使用最大信息增益算法为课件73页的数据构建决策树，要求代码运行能够直接打印出决策树。代码只能包含一个文件，文件名为学号_姓名.py。编程环境要求如下：
-#	Python 3.6.10
+#	Python 3.6.10 当前环境3.6.8
 #	python standard library
 #	numpy == 1.16.2
 #	scipy == 1.2.1
 #	pandas == 0.24.2
+#	networkx == 2.4
+#	graphviz==0.13.2
+#	matplotlib==3.2.1
 ##############################
 from math import log
 import matplotlib.pyplot as pyplot
@@ -60,8 +62,8 @@ def DB():
 
     return attr_data, train_data
 
-# 如果数据集中的clumn列，值为value，那么取出这一行，且去掉这一列，加入子数据集中
-def get_data_clumn(data_set, clumn, value):# TOSIMPLE
+# 删除数组的列
+def get_data_clumn(data_set, clumn, value):
     sub_data_set=[]
     for line in data_set:
         if line[clumn] == value:
@@ -74,9 +76,6 @@ def get_data_clumn(data_set, clumn, value):# TOSIMPLE
 # 计算数组中重复的元素
 def count_data_rep(data_set,clumn):
     sub_data_set = data_set[:,clumn]
-    # sub_data_set=[]
-    # for line in data_set:
-    #     sub_data_set.append(line[clumn])
     dic={}
     b=set(sub_data_set)
     for each_b in b:
@@ -102,13 +101,9 @@ def info_entropy(data_set):
     num = len(data_set)
     # 标签计数字典
     count = {}
-    for i in data_set:
+    for i in data_set[:,0]:
         # 获取样本的标签
-        current_label = i[0]
-        # 如果当前标签不在计数字典里，则初始化
-        if current_label not in count.keys():
-            count[current_label] = 0
-        count[current_label] += 1
+        count[i] = 1
 
     # 信息熵初始化
     entropy = 0.0
@@ -122,8 +117,8 @@ def info_entropy(data_set):
 
 # 计算最大信息增益
 def max_entropy(data_set):
-    # 属性个数
-    feature_num = len(data_set[0]) - 1  # 为啥-1
+    # 属性索引
+    feature_index = len(data_set[0])
     # 根节点的信息熵
     print("\n根节点信息熵计算：")
     root_node = info_entropy(data_set)
@@ -134,7 +129,7 @@ def max_entropy(data_set):
     # 包含的选项
     option_list=["是","否"]
     # clumn为列号
-    for clumn in range(1,feature_num):
+    for clumn in range(1,feature_index):
         new_ent = 0.0
         # 将 是与否的个数提取出来
         option_dic=count_data_rep(data_set,clumn)
@@ -145,57 +140,50 @@ def max_entropy(data_set):
             data_clumn = get_data_clumn(data_set, clumn, value)
             # 计算条件概率
             P = float(option_dic[value]) / len(data_set)
-            # 计算条件熵
-            temp = P * info_entropy(data_clumn) # Ent(a)
+            # 计算条件熵  Ent(a)
+            temp = P * info_entropy(data_clumn)
             new_ent += temp
             print("属性值", value, "条件概率", P, "条件熵", temp)
         print("条件熵总和为：", new_ent)
-        # 计算信息增益
-        info_gain = root_node - new_ent # Gain(D,A)
+        # 计算信息增益  Gain(D,A)
+        info_gain = root_node - new_ent
         print("信息增益为：", info_gain)
         if info_gain > maxinfo_gain:
             maxinfo_gain = info_gain
             max_index = clumn
     return max_index
 
-# 递归方式创建决策树
-# data_set为当前数据集，attr为剩余的还未用过的属性集
+# 创建决策树
 def create_tree(data_set, attr):
-    # 获取标签，data_set的最后一列
-    # note: 因为递归，data_set会改变，每次要从新的data_set中获取
+    # 获取标签，data_set[0]
     true_labels = []
     for line in data_set:
         true_labels.append(line[0])
-    # 递归终止条件：标签全部相同（例如全是‘姚明’），或者只有一个标签，没必要再进行下去，直接返回这个标签
+    #  到人名 递归终止
     if true_labels.count(true_labels[0]) == len(true_labels):
         return true_labels[0]
-    # 递归终止条件：数据集中只有一个属性（只有一列，标签列，实际没有意义），没必要继续下去，直接返回列中相同值最多的标签
+    # 遍历完终止
     if len(data_set[0]) == 1:
         return max(true_labels, key=true_labels.count)
-    # 从当前数据集和剩余的属性集attr中获取最优属性(信息增益最大)的索引和属性名
+    # 最大信息增益
     best_index = max_entropy(data_set)
     best_attr = attr[best_index]
-    print("最好的属性为：", attr[best_index])
-    print("*********************************************************")
+
+    print("--------------------------------------")
+    print("当前最大增益属性为：", attr[best_index])
     # 开始创建决策树
-    # 初始化字典，创建根节点，第一个属性对应的也是一个字典
     root = {best_attr: {}}
     # 获取最优属性对应的列并去重
-    best_row = []
-    for line in data_set:
-        best_row.append(line[best_index])
+    best_row = np.array(data_set[:,best_index])
+    # for line in data_set:
+    #     best_row.append(line[best_index])
     unique_row = set(best_row)
-    # value为列可能的取值，在20问读心游戏里为：是/否
     for value in unique_row:
-        # 新建子属性集合，并且将用完的属性从属性集中删除
-        # note: 最好是不要改变attr的内容，新建一个sub_attr拷贝attr，对sub_attr做删除操作
+        # 子属性集合 不改变原数组
         sub_attr = attr[:]
         # del sub_attr[best_index]
         sub_attr=np.delete(sub_attr,best_index)
-        # 递归构造决策树
-        # note: root[best_attr]是一个字典
-        #  根据当前best_attr属性的所有可能的取值value进行构造，在20问读心游戏里为：是/否
-        #  也就是说构造出的决策树是二叉树
+        # 子节点递归
         root[best_attr][value] = create_tree(get_data_clumn(data_set, best_index, value), sub_attr)
     return root
 
@@ -321,6 +309,7 @@ def plot_tree(decision_tree, parent_pos, arrow_text):
             plot_arrow_text((plot_tree.x_offset, plot_tree.y_offset), root_pos, str(key))
     # note: 易错点，每次递归结束需要将y_offset加1.0 / plot_tree.total_depth，回到上一层
     plot_tree.y_offset = plot_tree.y_offset + 1.0 / plot_tree.total_depth
+
 # 画节点和指向节点的箭头的函数
 # root_pos为子节点的位置，也就是箭头指向的位置
 # parent_pos为父节点的位置，也就是箭头尾部所在的位置
