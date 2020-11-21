@@ -278,7 +278,7 @@ def plot_tree(decision_tree, parent_pos, arrow_text):
     #       因此+0.5 / plotTree.totalW，使其位于区域正中
     #  最终的公式经过合并就是下式：
     root_pos = (plot_tree.x_offset + (1.0 + float(leaf_num)) / 2.0 / plot_tree.total_width, plot_tree.y_offset)
-    # 画出由当前子决策树父节点指来的箭头和箭头上的文本（在20问读心游戏里为：是/否）以及箭头指向的当前决策树的根节点
+    # 画出由当前子决策树父节点指来的箭头和箭头上的文本以及箭头指向的当前决策树的根节点
     plot_arrow_text(root_pos, parent_pos, arrow_text)
     # 节点类型为决策类型decision_node，不是叶子
     plot_node(root_pos, parent_pos, decision_node, root_attr)
