@@ -18,15 +18,18 @@ if(platform.system()=='Windows'):
 #	pandas == 0.24.2
 ##############################
 from math import log
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as pyplot
+import numpy as np
 
 # 显示中文标签
-plt.rcParams['font.sans-serif'] = ['SimHei']
+pyplot.rcParams['font.sans-serif'] = 'SimHei'
 # 设置决策树样式
-# boxstyle为文本框的类型，sawtooth是锯齿形，fc是边框线粗细
-# arrowstyle是树的线为箭头样式
+# boxstyle为文本框的类型，sawtooth是锯齿形,round4是圆一点的四边形，fc是边框线粗细
+# 属性节点
 decision_node = dict(boxstyle="sawtooth", fc="0.8")
+# 叶子节点
 leaf_node = dict(boxstyle="round4", fc="0.8")
+# arrowstyle是树的线为箭头样式
 arrow = dict(arrowstyle="<-")
 # 创建数据集
 def DB():
@@ -36,6 +39,7 @@ def DB():
     train_data = []
 
     attr_data.extend(["人物","男","运动员","70后","光头","80后","离婚","选秀","篮球","内地","演员"])
+    attr_data=np.array(attr_data)
 
     train_data.append(["姚明","是","是","否","否","是","否","否","是","是","否"])
     train_data.append(["刘翔","是","是","否","否","是","是","否","否","是","否"])
@@ -54,7 +58,7 @@ def DB():
     train_data.append(["邓紫棋","否","否","否","否","否","否","否","否","否","否"])
     train_data.append(["徐佳莹","否","否","否","否","是","否","是","否","否","否"])
     train_data.append(["赵丽颖","否","否","否","否","是","否","否","否","是","是"])
-
+    train_data=np.array(train_data)
     print("属性集：")
     print(attr_data)
     print("数据集：")
@@ -62,21 +66,23 @@ def DB():
 
     return attr_data, train_data
 
-# 如果数据集中的axis列，值为value，那么取出这一行，且去掉这一列，加入子数据集中
-def split_data_set(data_set, axis, value):
-    sub_data_set = []
+# 如果数据集中的clumn列，值为value，那么取出这一行，且去掉这一列，加入子数据集中
+def get_data_clumn(data_set, clumn, value):# TOSIMPLE
+    sub_data_set=[]
     for line in data_set:
-        if line[axis] == value:
+        if line[clumn] == value:
             newline = line[:]
-            del newline[axis]
+            #del newline[clumn]
+            newline=np.delete(newline,clumn)
             sub_data_set.append(newline)
-    return sub_data_set
+    return np.array(sub_data_set)
 
-# 计算数组中重复的数
-def count_data_rep(data_set,axis):
-    sub_data_set = []
-    for line in data_set:
-        sub_data_set.append(line[axis])
+# 计算数组中重复的元素
+def count_data_rep(data_set,clumn):
+    sub_data_set = data_set[:,clumn]
+    # sub_data_set=[]
+    # for line in data_set:
+    #     sub_data_set.append(line[clumn])
     dic={}
     b=set(sub_data_set)
     for each_b in b:
@@ -133,20 +139,20 @@ def max_entropy(data_set):
     max_index = -1
     # 包含的选项
     option_list=["是","否"]
-    # axis为列号
-    for axis in range(1,feature_num):
+    # clumn为列号
+    for clumn in range(1,feature_num):
         new_ent = 0.0
         # 将 是与否的个数提取出来
-        option_dic=count_data_rep(data_set,axis)
+        option_dic=count_data_rep(data_set,clumn)
         # value为列可能的取值，在20问读心游戏里为：是/否
         for value in option_list:
             if value not in option_dic:
                 continue
-            sub_data_set = split_data_set(data_set, axis, value)
+            data_clumn = get_data_clumn(data_set, clumn, value)
             # 计算条件概率
             P = float(option_dic[value]) / len(data_set)
             # 计算条件熵
-            temp = P * info_entropy(sub_data_set) # Ent(a)
+            temp = P * info_entropy(data_clumn) # Ent(a)
             new_ent += temp
             print("属性值", value, "条件概率", P, "条件熵", temp)
         print("条件熵总和为：", new_ent)
@@ -155,7 +161,7 @@ def max_entropy(data_set):
         print("信息增益为：", info_gain)
         if info_gain > maxinfo_gain:
             maxinfo_gain = info_gain
-            max_index = axis
+            max_index = clumn
     return max_index
 
 # 递归方式创建决策树
@@ -190,12 +196,13 @@ def create_tree(data_set, attr):
         # 新建子属性集合，并且将用完的属性从属性集中删除
         # note: 最好是不要改变attr的内容，新建一个sub_attr拷贝attr，对sub_attr做删除操作
         sub_attr = attr[:]
-        del sub_attr[best_index]
+        # del sub_attr[best_index]
+        sub_attr=np.delete(sub_attr,best_index)
         # 递归构造决策树
         # note: root[best_attr]是一个字典
         #  根据当前best_attr属性的所有可能的取值value进行构造，在20问读心游戏里为：是/否
         #  也就是说构造出的决策树是二叉树
-        root[best_attr][value] = create_tree(split_data_set(data_set, best_index, value), sub_attr)
+        root[best_attr][value] = create_tree(get_data_clumn(data_set, best_index, value), sub_attr)
     return root
 
 # 获取树的层数
@@ -240,7 +247,7 @@ def get_leaf_num(decision_tree):
 # 创建图对象，初始化，画图
 def create_plot(decision_tree):
     # 定义一个背景为白色的画布，并把画布清空
-    fig = plt.figure(1, facecolor='white')
+    fig = pyplot.figure(1, facecolor='white')
     fig.clf()
     # ax_prop为图形的样式，没有坐标轴标签
     ax_prop = dict(xticks=[], yticks=[])
@@ -248,7 +255,7 @@ def create_plot(decision_tree):
     # frameon=False代表没有矩形边框
     # note: 在python里，[函数名称].[变量名]相当于是全局变量
     # ax1相当于是图对象，在其它函数中使用
-    create_plot.ax1 = plt.subplot(111, frameon=False, **ax_prop)
+    create_plot.ax1 = pyplot.subplot(111, frameon=False, **ax_prop)
     # total_width和total_depth分别代表初始决策树的叶子节点数目和深度，不改变
     plot_tree.total_width = float(get_leaf_num(decision_tree))
     plot_tree.total_depth = float(get_depth(decision_tree))
@@ -265,7 +272,7 @@ def create_plot(decision_tree):
     # 初始根节点位置为图形的正中间最上方，即(0.5, 1.0)
     # 初始节点文本为空，等待获取
     plot_tree(decision_tree, (0.5, 1.0), '')
-    plt.show()
+    pyplot.show()
 
 
 # 递归画出决策树
