@@ -19,6 +19,7 @@ if(platform.system()=='Windows'):
 #	graphviz==0.13.2
 #	matplotlib==3.2.1
 ##############################
+# 参考：https://666wxy666.github.io/2020/04/26/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0-%E5%AE%9E%E9%AA%8C-%E5%86%B3%E7%AD%96%E6%A0%91/
 from math import log
 import matplotlib.pyplot as pyplot
 import numpy as np
@@ -110,13 +111,13 @@ def info_entropy(data_set):
     # 计算信息熵:-∑PilogPi
     for key in count.keys():
         entropy-=math_entropy(count[key],num)
-        print("人名", key, "概率", float(count[key]) / num, "信息熵",math_entropy(count[key],num))
+        # print("人名", key, "概率", float(count[key]) / num, "信息熵",math_entropy(count[key],num))
 
     print("Ent(D)=", entropy)
     return entropy
 
 # 计算最大信息增益
-def max_entropy(data_set):
+def max_entropy(data_set,attr):
     # 属性索引
     feature_index = len(data_set[0])
     # 根节点的信息熵
@@ -133,7 +134,7 @@ def max_entropy(data_set):
         new_ent = 0.0
         # 将 是与否的个数提取出来
         option_dic=count_data_rep(data_set,clumn)
-        # value为列可能的取值，在20问读心游戏里为：是/否
+        # 将是与否分开
         for value in option_list:
             if value not in option_dic:
                 continue
@@ -143,15 +144,15 @@ def max_entropy(data_set):
             # 计算条件熵  Ent(a)
             temp = P * info_entropy(data_clumn)
             new_ent += temp
-            print("属性值", value, "条件概率", P, "条件熵", temp)
+            # print("属性值", value, "条件概率", P, "条件熵", temp)
         print("条件熵总和为：", new_ent)
         # 计算信息增益  Gain(D,A)
         info_gain = root_node - new_ent
-        print("信息增益为：", info_gain)
+        print("属性",attr[clumn],"信息增益为：", info_gain)
         if info_gain > maxinfo_gain:
             maxinfo_gain = info_gain
             max_index = clumn
-    return max_index
+    return max_index,maxinfo_gain
 
 # 创建决策树
 def create_tree(data_set, attr):
@@ -166,11 +167,11 @@ def create_tree(data_set, attr):
     if len(data_set[0]) == 1:
         return max(true_labels, key=true_labels.count)
     # 最大信息增益
-    best_index = max_entropy(data_set)
+    best_index,max_gain = max_entropy(data_set,attr)
     best_attr = attr[best_index]
 
     print("--------------------------------------")
-    print("当前最大增益属性为：", attr[best_index])
+    print("当前最大增益属性为：", attr[best_index],"信息增益为",max_gain)
     # 开始创建决策树
     root = {best_attr: {}}
     # 获取最优属性对应的列并去重
